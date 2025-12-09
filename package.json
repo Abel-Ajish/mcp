@@ -1,9 +1,25 @@
 {
   "name": "mcp-github-render",
   "version": "1.0.0",
+  "description": "Minimal MCP server for GitHub integration",
   "type": "module",
+  "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js"
   },
-  "dependencies": {}
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "MCP",
+    "GitHub",
+    "Server",
+    "ChatGPT"
+  ],
+  "author": "Abel",
+  "license": "MIT"
 }
