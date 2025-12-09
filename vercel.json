@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/sse.js": {
+      "runtime": "edge"
+    },
+    "api/invoke.js": {
+      "runtime": "edge"
+    }
+  }
+}
