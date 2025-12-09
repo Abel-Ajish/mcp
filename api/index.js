@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 if (!GITHUB_TOKEN) throw new Error("Missing GITHUB_TOKEN");
 
-// GET / -> Return MCP tools metadata immediately
+// GET / -> MCP tools metadata (JSON)
 app.get("/", (req, res) => {
   res.json({
     tools: [
@@ -32,46 +32,34 @@ app.get("/", (req, res) => {
   });
 });
 
-// POST / -> Handle MCP calls with SSE streaming
+// POST / -> Execute MCP tools and return JSON
 app.post("/", async (req, res) => {
   const { tool, input, call_id } = req.body;
   if (!tool || !input || !call_id) {
     return res.status(400).json({ error: "Missing tool, input, or call_id" });
   }
 
-  // Set SSE headers
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-
-  // Helper to send SSE data
-  const sendSSE = (data) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  };
-
   try {
+    let output;
     if (tool === "list_repos") {
       const r = await fetch(`https://api.github.com/users/${input.owner}/repos`, {
-        headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent": "mcp-render-github" }
+        headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent": "mcp-json-github" }
       });
-      const data = await r.json();
-      sendSSE({ call_id, output: data });
-      res.end(); // Close the SSE stream
+      output = await r.json();
     } else if (tool === "read_file") {
       const r = await fetch(`https://api.github.com/repos/${input.owner}/${input.repo}/contents/${input.path}`, {
-        headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent": "mcp-render-github" }
+        headers: { Authorization: `token ${GITHUB_TOKEN}`, "User-Agent": "mcp-json-github" }
       });
-      const data = await r.json();
-      sendSSE({ call_id, output: data });
-      res.end(); // Close the SSE stream
+      output = await r.json();
     } else {
-      sendSSE({ call_id, error: "Unknown tool" });
-      res.end();
+      return res.status(400).json({ call_id, error: "Unknown tool" });
     }
+
+    // Return JSON immediately
+    res.json({ call_id, output });
   } catch (err) {
-    sendSSE({ call_id, error: err.message || "Server Error" });
-    res.end();
+    res.status(500).json({ call_id, error: err.message || "Server error" });
   }
 });
 
-app.listen(PORT, () => console.log(`MCP server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`MCP JSON server running on port ${PORT}`));
