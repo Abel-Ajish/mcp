@@ -55,7 +55,6 @@ app.post("/", async (req, res) => {
       return res.status(400).json({ call_id, error: "Unknown tool" });
     }
 
-    // Return JSON immediately
     res.json({ call_id, output });
   } catch (err) {
     res.status(500).json({ call_id, error: err.message || "Server error" });
