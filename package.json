@@ -1,6 +1,9 @@
 {
-  "name": "mcp-github-vercel",
+  "name": "mcp-github-render",
   "version": "1.0.0",
   "type": "module",
-  "dependencies": { "node-fetch": "3.3.2" }
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {}
 }
