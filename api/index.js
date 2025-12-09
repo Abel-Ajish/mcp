@@ -9,47 +9,29 @@ export default async function handler(req) {
     });
   }
 
-  // SSE for tool discovery
+  // GET request: return tools immediately (no SSE)
   if (req.method === "GET") {
-    const stream = new ReadableStream({
-      start(controller) {
-        function send(event, data) {
-          controller.enqueue(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    return new Response(JSON.stringify({
+      tools: [
+        { 
+          id: "list_repos", 
+          name: "List Repos", 
+          description: "List GitHub repos", 
+          inputs: { owner: { type: "string" } } 
+        },
+        { 
+          id: "read_file", 
+          name: "Read File", 
+          description: "Read a file from repo", 
+          inputs: { owner: { type: "string" }, repo: { type: "string" }, path: { type: "string" } } 
         }
-
-        // Send MCP tools once
-        send("mcp.tools", {
-          tools: [
-            { 
-              id: "list_repos", 
-              name: "List Repos", 
-              description: "List GitHub repos", 
-              inputs: { owner: { type: "string" } } 
-            },
-            { 
-              id: "read_file", 
-              name: "Read File", 
-              description: "Read a file from repo", 
-              inputs: { owner: { type: "string" }, repo: { type: "string" }, path: { type: "string" } } 
-            }
-          ]
-        });
-
-        // Periodic ping every 15 seconds
-        setInterval(() => send("ping", { t: Date.now() }), 15000);
-      }
-    });
-
-    return new Response(stream, {
-      headers: { 
-        "Content-Type": "text/event-stream", 
-        "Cache-Control": "no-cache, no-transform", 
-        "Connection": "keep-alive" 
-      }
+      ]
+    }), {
+      headers: { "Content-Type": "application/json" }
     });
   }
 
-  // POST requests for MCP tool calls
+  // POST requests: handle tool calls
   if (req.method === "POST") {
     let body;
     try {
@@ -62,7 +44,6 @@ export default async function handler(req) {
     }
 
     const { tool, input, call_id } = body;
-
     if (!tool || !input) {
       return new Response(JSON.stringify({ error: "Missing tool or input" }), { 
         status: 400, 
