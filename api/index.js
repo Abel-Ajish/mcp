@@ -3,27 +3,27 @@ import fetch from "node-fetch";
 export default async function handler(req) {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
-    return new Response(JSON.stringify({ error: "Missing GITHUB_TOKEN" }), { 
-      status: 500, 
-      headers: { "Content-Type": "application/json" } 
+    return new Response(JSON.stringify({ error: "Missing GITHUB_TOKEN" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
     });
   }
 
-  // GET request: return tools immediately (no SSE)
+  // GET: return tools immediately
   if (req.method === "GET") {
     return new Response(JSON.stringify({
       tools: [
-        { 
-          id: "list_repos", 
-          name: "List Repos", 
-          description: "List GitHub repos", 
-          inputs: { owner: { type: "string" } } 
+        {
+          id: "list_repos",
+          name: "List Repos",
+          description: "List GitHub repos",
+          inputs: { owner: { type: "string" } }
         },
-        { 
-          id: "read_file", 
-          name: "Read File", 
-          description: "Read a file from repo", 
-          inputs: { owner: { type: "string" }, repo: { type: "string" }, path: { type: "string" } } 
+        {
+          id: "read_file",
+          name: "Read File",
+          description: "Read a file from repo",
+          inputs: { owner: { type: "string" }, repo: { type: "string" }, path: { type: "string" } }
         }
       ]
     }), {
@@ -31,50 +31,32 @@ export default async function handler(req) {
     });
   }
 
-  // POST requests: handle tool calls
+  // POST: handle MCP tool calls
   if (req.method === "POST") {
     let body;
-    try {
-      body = await req.json();
-    } catch (e) {
-      return new Response(JSON.stringify({ error: "Invalid JSON" }), { 
-        status: 400, 
-        headers: { "Content-Type": "application/json" } 
-      });
-    }
+    try { body = await req.json(); } 
+    catch { return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { "Content-Type": "application/json" } }); }
 
     const { tool, input, call_id } = body;
     if (!tool || !input) {
-      return new Response(JSON.stringify({ error: "Missing tool or input" }), { 
-        status: 400, 
-        headers: { "Content-Type": "application/json" } 
-      });
+      return new Response(JSON.stringify({ error: "Missing tool or input" }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
-    async function gh(url) {
-      return fetch(url, { headers: { Authorization: `token ${token}`, "User-Agent": "mcp-vercel-github" } });
-    }
+    const gh = async url => fetch(url, { headers: { Authorization: `token ${token}`, "User-Agent": "mcp-vercel-github" } });
 
     if (tool === "list_repos") {
       const r = await gh(`https://api.github.com/users/${input.owner}/repos`);
       const data = await r.json();
-      return new Response(JSON.stringify({ call_id, output: data }), { 
-        headers: { "Content-Type": "application/json" } 
-      });
+      return new Response(JSON.stringify({ call_id, output: data }), { headers: { "Content-Type": "application/json" } });
     }
 
     if (tool === "read_file") {
       const r = await gh(`https://api.github.com/repos/${input.owner}/${input.repo}/contents/${input.path}`);
       const data = await r.json();
-      return new Response(JSON.stringify({ call_id, output: data }), { 
-        headers: { "Content-Type": "application/json" } 
-      });
+      return new Response(JSON.stringify({ call_id, output: data }), { headers: { "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown tool" }), { 
-      status: 400, 
-      headers: { "Content-Type": "application/json" } 
-    });
+    return new Response(JSON.stringify({ error: "Unknown tool" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
   return new Response("Method Not Allowed", { status: 405 });
